@@ -1,7 +1,7 @@
 {
-  "name": "postgres-automacao",
+  "name": "pg-omniscan",
   "version": "1.0.0",
-  "description": "",
+  "description": "PG-OmniScan: Advanced DBA Diagnostic Engine",
   "main": "index.js",
   "scripts": {
     "dev": "concurrently \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
