@@ -52,9 +52,12 @@ export default function HistoryPanel({ onLoad }) {
           <div key={item.id} className="history-item" onClick={() => handleLoadAnalysis(item.id)}>
             <div>
               <div className="hi-date">{new Date(item.date).toLocaleString('pt-BR')}</div>
-              <div className="hi-meta">{item.id}</div>
+              <div className="hi-meta">DB: {item.database}</div>
             </div>
-            <div className="hi-meta">{(item.size / 1024).toFixed(1)} KB</div>
+            <div className="hi-meta" style={{ display: 'flex', gap: '10px' }}>
+              <span style={{ color: item.issuesCount > 0 ? '#ffb86c' : '#50fa7b' }}>Problemas: {item.issuesCount}</span>
+              <span style={{ color: '#8be9fd' }}>Dicas: {item.recommendationsCount}</span>
+            </div>
           </div>
         ))}
       </div>
