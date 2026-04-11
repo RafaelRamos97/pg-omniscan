@@ -4,6 +4,9 @@ import CategorySection from './CategorySection';
 import Recommendations from './Recommendations';
 import AIPanel from './AIPanel';
 import HistoryPanel from './HistoryPanel';
+import { exportToPDF, exportToMarkdown } from '../utils/exporter';
+import StreamingConsole from './StreamingConsole';
+import OverviewMetrics from './OverviewMetrics';
 
 export default function Dashboard({ connectionInfo, onDisconnect }) {
   const [analysis, setAnalysis] = useState(null);
@@ -142,6 +145,14 @@ export default function Dashboard({ connectionInfo, onDisconnect }) {
     onDisconnect();
   };
 
+  const handleExportPDF = () => {
+    exportToPDF(analysis, connectionInfo.config);
+  };
+
+  const handleExportMD = () => {
+    exportToMarkdown(analysis, connectionInfo.config);
+  };
+
   const getTotalIssues = () => {
     if (!analysis) return 0;
     return Object.values(analysis.categories).reduce((sum, cat) => {
@@ -152,61 +163,7 @@ export default function Dashboard({ connectionInfo, onDisconnect }) {
   return (
     <>
       {loading && (
-        <div className="loading-overlay" style={{ background: 'rgba(10, 11, 14, 0.95)', backdropFilter: 'blur(10px)' }}>
-          <div className="diagnostic-console" style={{ width: '100%', maxWidth: '500px', textAlign: 'center' }}>
-            <div className="spinner" style={{ margin: '0 auto 24px' }}></div>
-            <h2 style={{ marginBottom: 8, fontSize: 20 }}>Análise em Curso...</h2>
-            <p style={{ color: 'var(--text-muted)', marginBottom: 24, fontSize: 14 }}>{progress.message}</p>
-            
-            <div className="progress-container" style={{ 
-              width: '100%', 
-              height: 8, 
-              background: 'rgba(255,255,255,0.05)', 
-              borderRadius: 4, 
-              overflow: 'hidden',
-              marginBottom: 24
-            }}>
-              <div className="progress-bar" style={{ 
-                width: `${progress.percent}%`, 
-                height: '100%', 
-                background: 'linear-gradient(90deg, var(--accent-blue), var(--accent-green))',
-                transition: 'width 0.3s ease'
-              }}></div>
-            </div>
-
-            <div className="console-logs" style={{ 
-              textAlign: 'left', 
-              background: 'black', 
-              padding: 16, 
-              borderRadius: 8, 
-              fontSize: 12, 
-              fontFamily: 'monospace',
-              color: '#00ff00',
-              opacity: 0.8,
-              minHeight: 120,
-              marginBottom: 24
-            }}>
-              {progress.logs.map((log, i) => (
-                <div key={i} style={{ marginBottom: 4 }}>
-                  <span style={{ opacity: 0.5 }}>[{new Date().toLocaleTimeString()}]</span> {log}
-                </div>
-              ))}
-              <div style={{ animation: 'blink 1s infinite' }}>_</div>
-            </div>
-
-            <button 
-              className="btn btn-secondary" 
-              onClick={handleCancel}
-              style={{ padding: '10px 24px', fontSize: 13, borderColor: 'rgba(255,255,255,0.1)' }}
-            >
-              🛑 Cancelar Análise
-            </button>
-            
-            <div style={{ marginTop: 20, color: 'var(--text-muted)', fontSize: 11 }}>
-              🔒 Garantia Read-Only: Verificando assinaturas SELECT...
-            </div>
-          </div>
-        </div>
+        <StreamingConsole progress={progress} onCancel={handleCancel} />
       )}
 
       {error && (
@@ -501,32 +458,24 @@ export default function Dashboard({ connectionInfo, onDisconnect }) {
 
         {activeTab === 'analysis' && analysis && (
           <>
-            <div className="score-grid">
-              <div className="score-card info">
-                <div className="card-icon">🗄️</div>
-                <div className="card-title">Database</div>
-                <div className="card-value" style={{ fontSize: 18 }}>{connectionInfo.config.database}</div>
-                <div className="card-detail">PG v{Math.floor(analysis.version / 10000)}</div>
-              </div>
-              <div className={`score-card ${getTotalIssues() > 10 ? 'critical' : getTotalIssues() > 0 ? 'warning' : 'good'}`}>
-                <div className="card-icon">📋</div>
-                <div className="card-title">Achados Totais</div>
-                <div className="card-value">{getTotalIssues()}</div>
-                <div className="card-detail">alinhados por saúde</div>
-              </div>
-              <div className={`score-card ${(analysis.recommendations || []).length > 3 ? 'warning' : 'good'}`}>
-                <div className="card-icon">💡</div>
-                <div className="card-title">Recomendações</div>
-                <div className="card-value">{(analysis.recommendations || []).length}</div>
-                <div className="card-detail">passivas encontradas</div>
-              </div>
-              <div className="score-card info">
-                <div className="card-icon">🕐</div>
-                <div className="card-title">Execução</div>
-                <div className="card-value" style={{ fontSize: 14 }}>{new Date(analysis.timestamp).toLocaleString()}</div>
-                <div className="card-detail">{analysis.stats.executed}/{analysis.stats.total} scripts</div>
-              </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginBottom: '24px' }}>
+              <button 
+                className="btn btn-secondary" 
+                onClick={handleExportMD}
+                style={{ fontSize: '12px', padding: '8px 16px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}
+              >
+                📝 Exportar Markdown
+              </button>
+              <button 
+                className="btn btn-primary" 
+                onClick={handleExportPDF}
+                style={{ fontSize: '12px', padding: '8px 16px', background: '#6366f1', border: 'none' }}
+              >
+                📄 Exportar PDF Oficial
+              </button>
             </div>
+            
+            <OverviewMetrics analysis={analysis} connectionInfo={connectionInfo} />
 
             {Object.entries(analysis.categories).map(([catName, items]) => (
               <CategorySection
