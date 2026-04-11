@@ -8,3 +8,4 @@ build/
 
 pg_scripts/*
 !pg_scripts/sql/
+server/history/*.db
