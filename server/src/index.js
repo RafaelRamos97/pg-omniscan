@@ -120,9 +120,9 @@ app.post('/api/analyze/ai', async (req, res) => {
     let aiResult;
 
     if (provider === 'gemini') {
-      aiResult = await aiService.analyzeWithGemini(apiKey, analysisData.categories);
+      aiResult = await aiService.analyzeWithGemini(apiKey, analysisData);
     } else if (provider === 'openai') {
-      aiResult = await aiService.analyzeWithOpenAI(apiKey, analysisData.categories);
+      aiResult = await aiService.analyzeWithOpenAI(apiKey, analysisData);
     } else {
       return res.status(400).json({ error: 'Provider inválido. Use "gemini" ou "openai".' });
     }
