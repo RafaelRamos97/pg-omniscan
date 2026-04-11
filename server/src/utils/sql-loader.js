@@ -146,16 +146,15 @@ class SQLLoader {
       const baseName = name.replace(versionMatch[0], '');
       let minVersion;
 
-      if (vStr.length === 2) {
-        // Two digits: first is major, second is minor (e.g., 84 = 8.4 = 80400)
+      if (vStr.startsWith('8') || vStr.startsWith('9')) {
+        // PG 8.x or 9.x: first is major, second is minor (e.g., 84 = 8.4 = 80400, 96 = 9.6 = 90600)
         const major = parseInt(vStr[0]);
         const minor = parseInt(vStr[1]);
         minVersion = major * 10000 + minor * 100;
       } else {
-        // Three digits: first two are major, last is minor (e.g., 120 = 12.0 = 120000)
-        // Or two digits for PG >= 10 (e.g., 10 = 10.0 = 100000)
+        // PG 10+: two or three digits mean major versions (e.g., 10 = 10.0 = 100000, 12 = 120000, 140 = 140000)
         const major = parseInt(vStr);
-        minVersion = major * 10000;
+        minVersion = major >= 100 ? major * 100 : major * 10000;
       }
 
       return { baseName, minVersion, isVersioned: true };
@@ -167,10 +166,11 @@ class SQLLoader {
       const vStr = maxMatch[1];
       const baseName = name.replace(maxMatch[0], '');
       let maxVersion;
-      if (vStr.length === 2) {
+      if (vStr.startsWith('8') || vStr.startsWith('9')) {
         maxVersion = parseInt(vStr[0]) * 10000 + parseInt(vStr[1]) * 100;
       } else {
-        maxVersion = parseInt(vStr) * 10000;
+        const major = parseInt(vStr);
+        maxVersion = major >= 100 ? major * 100 : major * 10000;
       }
       return { baseName, minVersion: 0, maxVersion, isVersioned: true };
     }
