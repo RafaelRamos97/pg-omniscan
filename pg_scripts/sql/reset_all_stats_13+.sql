@@ -1,0 +1,35 @@
+SELECT 
+  pg_stat_reset_shared('archiver'), 
+  pg_stat_reset_shared('bgwriter'), 
+  pg_stat_reset(), 
+  pg_stat_reset_slru('CommitTs'), 
+  pg_stat_reset_slru('MultiXactMember'), 
+  pg_stat_reset_slru('MultiXactOffset'), 
+  pg_stat_reset_slru('Notify'), 
+  pg_stat_reset_slru('Serial'),
+  pg_stat_reset_slru('Subtrans'), 
+  pg_stat_reset_slru('Xact'), 
+  pg_stat_reset_slru('other')
+\gset svp_
+
+\if :svp_lib
+  \if :svp_ext
+    SELECT pg_stat_statements_reset() AS statements;
+  \endif
+\endif
+
+\set QUIET off
+ANALYZE;
+\set QUIET on
+
+\qecho
+\qecho '*** Show current stats_reset ***'
+\qecho
+
+SELECT datname AS database, stats_reset FROM pg_stat_database WHERE datname IS NOT NULL ORDER BY datname;
+SELECT 'bgwriter' AS shared_stat, stats_reset FROM pg_stat_bgwriter
+UNION
+SELECT 'archiver' AS shared_stat, stats_reset FROM pg_stat_archiver
+UNION
+SELECT DISTINCT 'slru / ' || name AS shared_stat, stats_reset FROM pg_stat_slru
+ORDER BY 2,1;

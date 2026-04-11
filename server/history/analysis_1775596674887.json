@@ -1,0 +1,197 @@
+{
+  "timestamp": "2026-04-07T21:17:51.420Z",
+  "database": "tsaude-dev",
+  "version": 180001,
+  "stats_reset": "N/A",
+  "categories": {
+    "performance": [
+      {
+        "baseName": "statements_top5",
+        "error": "column \"total_time\" does not exist",
+        "errorCode": "42703"
+      },
+      {
+        "baseName": "statements_time",
+        "error": "column \"total_time\" does not exist",
+        "errorCode": "42703"
+      },
+      {
+        "baseName": "checkpoints",
+        "error": "column \"checkpoints_timed\" does not exist",
+        "errorCode": "42703"
+      },
+      {
+        "baseName": "bgwriter",
+        "data": [
+          {
+            "Bytes allocated      / Day": "5214 MB",
+            "Bytes clean          / Day": "178 MB",
+            "BG stops by maxpages / Day": "206.9",
+            "Age": {
+              "days": 42,
+              "hours": 10,
+              "minutes": 10,
+              "seconds": 14
+            }
+          }
+        ],
+        "rowCount": 1
+      },
+      {
+        "baseName": "shared_buffers_stats",
+        "data": [
+          {
+            "Name": "Buffer Blocks",
+            "Size": "128 MB"
+          },
+          {
+            "Name": "<anonymous>",
+            "Size": "4769 kB"
+          },
+          {
+            "Name": "XLOG Ctl",
+            "Size": "4110 kB"
+          },
+          {
+            "Name": "AioHandleIOV",
+            "Size": "2784 kB"
+          },
+          {
+            "Name": null,
+            "Size": "2095 kB"
+          },
+          {
+            "Name": "AioHandle",
+            "Size": "1566 kB"
+          },
+          {
+            "Name": "AioHandleData",
+            "Size": "1392 kB"
+          },
+          {
+            "Name": "Buffer Descriptors",
+            "Size": "1024 kB"
+          },
+          {
+            "Name": "transaction",
+            "Size": "517 kB"
+          },
+          {
+            "Name": "Checkpointer Data",
+            "Size": "512 kB"
+          }
+        ],
+        "rowCount": 10
+      },
+      {
+        "baseName": "statements_calls",
+        "error": "column \"min_time\" does not exist",
+        "errorCode": "42703"
+      },
+      {
+        "baseName": "statements_group_database_resume",
+        "error": "pg_stat_statements must be loaded via \"shared_preload_libraries\"",
+        "errorCode": "55000"
+      },
+      {
+        "baseName": "statements_group_database_temp",
+        "error": "column \"blk_read_time\" does not exist",
+        "errorCode": "42703"
+      },
+      {
+        "baseName": "statements_group_database_time",
+        "error": "column \"min_time\" does not exist",
+        "errorCode": "42703"
+      },
+      {
+        "baseName": "statements_group_database_total",
+        "error": "pg_stat_statements must be loaded via \"shared_preload_libraries\"",
+        "errorCode": "55000"
+      },
+      {
+        "baseName": "statements_group_total",
+        "error": "pg_stat_statements must be loaded via \"shared_preload_libraries\"",
+        "errorCode": "55000"
+      },
+      {
+        "baseName": "statements_jit",
+        "error": "pg_stat_statements must be loaded via \"shared_preload_libraries\"",
+        "errorCode": "55000"
+      },
+      {
+        "baseName": "statements_local",
+        "error": "pg_stat_statements must be loaded via \"shared_preload_libraries\"",
+        "errorCode": "55000"
+      },
+      {
+        "baseName": "statements_plan",
+        "error": "pg_stat_statements must be loaded via \"shared_preload_libraries\"",
+        "errorCode": "55000"
+      },
+      {
+        "baseName": "statements_resume",
+        "error": "pg_stat_statements must be loaded via \"shared_preload_libraries\"",
+        "errorCode": "55000"
+      },
+      {
+        "baseName": "statements_rows",
+        "error": "column \"min_time\" does not exist",
+        "errorCode": "42703"
+      },
+      {
+        "baseName": "statements_rows_call",
+        "error": "column \"min_time\" does not exist",
+        "errorCode": "42703"
+      },
+      {
+        "baseName": "statements_shared",
+        "error": "column \"blk_read_time\" does not exist",
+        "errorCode": "42703"
+      },
+      {
+        "baseName": "statements_temp",
+        "error": "column \"blk_read_time\" does not exist",
+        "errorCode": "42703"
+      },
+      {
+        "baseName": "statements_time_96",
+        "error": "column \"total_time\" does not exist",
+        "errorCode": "42703"
+      },
+      {
+        "baseName": "statements_total",
+        "error": "column \"since_days\" does not exist",
+        "errorCode": "42703"
+      },
+      {
+        "baseName": "statements_wal",
+        "error": "pg_stat_statements must be loaded via \"shared_preload_libraries\"",
+        "errorCode": "55000"
+      }
+    ]
+  },
+  "stats": {
+    "total": 22,
+    "executed": 2,
+    "errors": 20,
+    "empty": 0
+  },
+  "recommendations": [
+    {
+      "priority": "LOW",
+      "category": "Descoberta",
+      "message": "Achado em: BGWRITER",
+      "detail": "O diagnóstico identificou 1 linha(s) de metadados relevantes.",
+      "rationale": "Este script faz parte do arsenal profundo e retornou dados que podem indicar comportamentos atípicos.",
+      "action": "Expanda a seção \"bgwriter\" nos detalhes abaixo para analisar os dados brutos."
+    },
+    {
+      "priority": "LOW",
+      "category": "Descoberta",
+      "message": "Achado em: SHARED BUFFERS STATS",
+      "detail": "O diagnóstico identificou 10 linha(s) de metadados relevantes.",
+      "rationale": "Este script faz parte do arsenal profundo e retornou dados que podem indicar comportamentos atípicos.",
+      "action": "Expanda a seção \"shared_buffers_stats\" nos detalhes abaixo para analisar os dados brutos."
+    }
+  ]
+}
