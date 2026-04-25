@@ -1,56 +1,127 @@
 # 🐘 PG-OmniScan
 
-**PG-OmniScan** é uma ferramenta de Diagnóstico e Auditoria Contínua para bancos de dados PostgreSQL. Construído com foco absoluto na experiência do Database Administrator (DBA), o sistema orquestra de forma inteligente a execução de dezenas de scripts e fornece recomendações orientadas a métricas reais do banco.
+**PG-OmniScan** é um Sistema Especialista de Diagnóstico e Auditoria para bancos de dados PostgreSQL. Construído com foco absoluto na experiência do Database Administrator (DBA), o sistema orquestra de forma inteligente a execução de centenas de scripts diagnósticos, aplica heurísticas de elite baseadas em práticas de SRE e entrega relatórios profissionais de nível enterprise com recomendações acionáveis.
+
+> ⚡ **100% Read-Only** — Nenhum comando de escrita é executado. Garantia de segurança total via SQL Guard.
+
+---
 
 ## 🚀 Principais Features
 
-- **Analista DBA Universal**: Motor capaz de processar mais de 450 scripts distintos, fornecendo recomendações acionáveis na interface para otimização de índices (Bloat, Unused, Missing).
-- **Zero-Hang Initialization**: Otimização profunda em processamento de grandes arquivos SQL, impedindo travamentos de Event Loop via stream processing iterativo.
-- **Protocol-Level Timeouts**: Segurança máxima – 100% read-only. Timeouts tratados nativamente ao nível do driver Node, sem uso de comandos `SET` restritivos.
-- **Accordion UI Dinâmico**: Resultados expandem ou ocultam automaticamente baseados na criticidade e dados encontrados (achados reais vs vazios).
-- **Cache de Arsenal SQL**: Leitura e parsing super rápidos e cacheados em memória para que o diagnóstico repetido seja instantâneo.
-- **Config persistence**: Usa `localStorage` para lembrar quais análises você foca e os scripts específicos que você prefere ignorar.
+### 🧠 Motor de Inteligência DBA (Expert System)
+- **Heurísticas Automatizadas**: Motor baseado em regras que analisa cada resultado de script em tempo real, identificando vulnerabilidades de segurança, gargalos de performance, riscos de wraparound e problemas de I/O
+- **Cobertura de 6 Domínios**: Segurança & Acessos, Bloat & Espaço, Vacuum & Wraparound, Performance & Queries, Memória & Cache, I/O & WAL
+- **Banners de Recomendação**: Alertas visuais (Crítico/Alerta/Info) acima de cada resultado com explicação de impacto e ação corretiva
 
-## 🛠️ Tecnologias
+### 📊 Relatórios Enterprise (PDF & Markdown)
+- **Capa Institucional** com classificação "Confidencial"
+- **Nota de Saúde Calculada** (0-10) com semáforo visual
+- **Sumário Executivo** para gestores/C-Level com Matriz de Risco
+- **Framework 5 Cs** (Critério, Condição, Causa, Consequência, Ação Corretiva) em cada achado
+- **Escopo e Metodologia** documentados automaticamente
+- **Dados Brutos** tabulados como evidência de auditoria
 
-- **Backend:** Node.js, Express, `pg` driver
-- **Frontend:** React, Vite, Server-Sent Events (SSE) para acompanhamento em tempo real
+### 🔍 Arsenal Diagnóstico
+- **469+ Scripts SQL** do repositório [fabiotr/pg_scripts](https://github.com/fabiotr/pg_scripts)
+- **Compatibilidade**: PostgreSQL 8.2 até PostgreSQL 18
+- **Sincronização Automática**: Atualização do arsenal via GitHub com detecção de novos/atualizados
+- **Seleção Inteligente**: Apenas scripts compatíveis com a versão conectada são executados
+- **11 Categorias**: Visão Geral, Índices, Tabelas, Performance, Manutenção, I/O, Segurança, Replicação, Configuração, Emergência, Internals
 
-## 🙏 Créditos e Atribuições (Special Thanks)
+### 🛡️ Segurança (SQL Guard)
+- **Blocklist por nome**: Scripts de kill, reset, reindex, vacuum direto
+- **Blocklist por função**: `pg_terminate_backend`, `pg_cancel_backend`, `pg_stat_reset`, etc.
+- **Validação Strict Read-Only**: Toda query deve começar com `SELECT`/`WITH`/`SHOW`
 
-O arsenal e coração analítico de Consultas SQL que alimenta o **PG-OmniScan** é retirado do notável trabalho de contribuição da comunidade mantido pelo Fabio Telles.
+### 📜 Histórico e Comparação
+- **Persistência SQLite**: Todas as análises são salvas automaticamente em banco embutido
+- **Time-Travel Delta**: Comparação automática entre execuções mostrando evolução de problemas (+/-) 
+- **Exportação**: Restaure qualquer análise passada e exporte como PDF ou Markdown
+
+### 🤖 Integração com IA
+- Suporte a **Google Gemini** e **OpenAI** para análise assistida dos resultados
+- O DBA fornece a API Key e o motor de IA recebe o contexto completo da auditoria
+
+---
+
+## 🛠️ Stack Tecnológica
+
+| Camada | Tecnologia | Detalhes |
+|:---|:---|:---|
+| Backend | Node.js + Express | API REST + SSE (Server-Sent Events) para streaming em tempo real |
+| Frontend | React + Vite | Dashboard interativo com accordion dinâmico |
+| Banco Embutido | SQLite 3 | Persistência de histórico de análises |
+| Driver PostgreSQL | `pg` (node-postgres) | Pool com protocol-level timeouts |
+| Relatórios | jsPDF + jspdf-autotable | Geração de PDF profissional no browser |
+| Scripts SQL | fabiotr/pg_scripts | Sincronização automática via GitHub API |
+
+---
+
+## 🙏 Créditos e Atribuições
+
+O arsenal e coração analítico de Consultas SQL que alimenta o **PG-OmniScan** é retirado do notável trabalho de contribuição da comunidade mantido por Fabio Telles.
 
 - **Autor dos Scripts SQL:** Fábio Telles
 - **Repositório Original:** [fabiotr/pg_scripts](https://github.com/fabiotr/pg_scripts)
 
-Mantemos a pasta dos scripts originais estruturada como um **Git Submodule** neste projeto. Assim, asseguramos total transparência de direitos autorais e facilitamos o fluxo para manter os scripts analíticos sempre atualizados, colaborando indiretamente com as diretrizes e licenças de código aberto do repositório original.
+Mantemos a pasta dos scripts originais estruturada como um **Git Submodule** neste projeto, assegurando total transparência de direitos autorais e facilitando o fluxo para manter os scripts analíticos sempre atualizados.
+
+---
 
 ## 📥 Como Instalar e Rodar
 
-1. Clone o repositório incluindo os submodulos (onde residem os scripts):
+1. Clone o repositório incluindo os submódulos:
    ```bash
-   git clone --recurse-submodules https://github.com/SEU_USUARIO/PG-OmniScan.git
-   cd PG-OmniScan
+   git clone --recurse-submodules https://github.com/RafaelRamos97/pg-omniscan.git
+   cd pg-omniscan
    ```
 
-2. Instale as dependências na raiz, que instalará via concorrência do frontend e backend:
+2. Instale as dependências do backend e frontend:
    ```bash
-   npm i
-   cd server && npm i
-   cd ../client && npm i
+   cd server && npm install
+   cd ../client && npm install
+   cd ..
    ```
 
-3. Configure as varíaveis de ambiente criando o arquivo `.env`:
+3. **(Opcional)** Se desejar alterar a porta padrão do backend (3001), crie um `.env` na pasta `server/`:
    ```bash
    PORT=3001
    ```
 
-4. Execute o projeto (Frontend e Backend iniciando simultâneamente):
+4. Execute o projeto (Frontend e Backend simultaneamente):
    ```bash
    npm run dev
    ```
 
-5. Acesse `http://localhost:5173` e inicie suas análises.
+5. Acesse `http://localhost:5173` e conecte-se ao seu banco PostgreSQL.
+
+---
+
+## 📁 Estrutura do Projeto
+
+```
+pg-omniscan/
+├── client/                     # Frontend React + Vite
+│   └── src/
+│       ├── components/         # Dashboard, CategorySection, HistoryPanel, etc.
+│       └── utils/
+│           └── exporter.js     # Motor de Relatórios Enterprise (PDF/Markdown)
+├── server/                     # Backend Node.js + Express
+│   └── src/
+│       ├── services/
+│       │   ├── analyzer.js             # Motor DBA Principal (11 categorias)
+│       │   ├── intelligence-service.js # Heurísticas de Elite (Expert System)
+│       │   ├── storage-service.js      # Persistência SQLite
+│       │   └── sync-service.js         # Sincronização GitHub do Arsenal
+│       └── utils/
+│           ├── sql-loader.js           # Parser e Cache de Scripts SQL
+│           └── sql-guard.js            # Trava de Segurança Read-Only
+├── pg_scripts/                 # Arsenal SQL (submodule fabiotr/pg_scripts)
+└── README.md
+```
+
+---
 
 ## 🪪 Licença
-PG-OmniScan é de código aberto. Ao distribuir, os créditos do backend à `fabiotr/pg_scripts` não devem ser ignorados.
+
+PG-OmniScan é de código aberto. Ao distribuir, os créditos do arsenal SQL ao repositório [fabiotr/pg_scripts](https://github.com/fabiotr/pg_scripts) não devem ser removidos.
