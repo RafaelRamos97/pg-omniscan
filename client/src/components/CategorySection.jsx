@@ -1,5 +1,39 @@
 import { useState } from 'react';
 
+/**
+ * Converte valores complexos do PostgreSQL (intervals, arrays, objetos) em texto legível.
+ * O driver `pg` retorna tipos como `interval` como objetos JS: { hours: 1, minutes: 30, seconds: 5 }
+ */
+function formatCellValue(val) {
+  if (val === null || val === undefined) return '—';
+  if (typeof val === 'boolean') return val ? 'SIM' : 'NÃO';
+  if (typeof val === 'string' || typeof val === 'number') return String(val);
+  if (Array.isArray(val)) return val.map(v => formatCellValue(v)).join(', ');
+  
+  // Objeto: provavelmente um interval do PostgreSQL { hours, minutes, seconds, ... }
+  if (typeof val === 'object') {
+    // Interval PostgreSQL: { years, months, days, hours, minutes, seconds, milliseconds }
+    if ('hours' in val || 'minutes' in val || 'seconds' in val || 'days' in val || 'milliseconds' in val) {
+      const parts = [];
+      if (val.years) parts.push(`${val.years}a`);
+      if (val.months) parts.push(`${val.months}m`);
+      if (val.days) parts.push(`${val.days}d`);
+      const h = val.hours || 0;
+      const m = val.minutes || 0;
+      const s = val.seconds || 0;
+      const ms = val.milliseconds || 0;
+      if (h || m || s || ms) {
+        parts.push(`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(Math.floor(s)).padStart(2,'0')}`);
+        if (ms) parts[parts.length - 1] += `.${String(ms).padStart(3,'0')}`;
+      }
+      return parts.length > 0 ? parts.join(' ') : '00:00:00';
+    }
+    // Fallback: tenta JSON compacto
+    try { return JSON.stringify(val); } catch { return '—'; }
+  }
+  return String(val);
+}
+
 function ScriptItem({ item }) {
   const hasData = item.data && item.data.length > 0;
   const hasError = !!item.error;
@@ -164,7 +198,7 @@ function ScriptItem({ item }) {
                   {item.data.slice(0, 100).map((row, rowIdx) => (
                     <tr key={rowIdx}>
                       {Object.values(row).map((val, colIdx) => (
-                        <td key={colIdx}>{val !== null && val !== undefined ? String(val) : '—'}</td>
+                        <td key={colIdx}>{formatCellValue(val)}</td>
                       ))}
                     </tr>
                   ))}
