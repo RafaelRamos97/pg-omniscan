@@ -78,6 +78,38 @@ function ScriptItem({ item }) {
 
       {isExpanded && (
         <div className="script-body" style={{ padding: '15px 5px 5px 5px' }}>
+          
+          {/* BANNER DE RECOMENDAÇÃO DBA (INTELIGÊNCIA NATIVA) */}
+          {item.baseRecommendation && (
+            <div style={{
+              margin: '0 10px 15px 10px',
+              padding: '12px 16px',
+              borderRadius: '8px',
+              borderLeft: `4px solid ${
+                item.baseRecommendation.severity === 'critical' ? '#ef4444' : 
+                item.baseRecommendation.severity === 'warning' ? '#f59e0b' : '#3b82f6'
+              }`,
+              background: 'rgba(255,255,255,0.03)',
+              animation: 'fadeIn 0.3s ease'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
+                <span style={{ fontSize: '16px' }}>
+                  {item.baseRecommendation.severity === 'critical' ? '🔴' : 
+                   item.baseRecommendation.severity === 'warning' ? '🟠' : '🔵'}
+                </span>
+                <strong style={{ fontSize: '13px', color: '#fff' }}>{item.baseRecommendation.title}</strong>
+              </div>
+              <p style={{ fontSize: '12px', margin: '4px 0', color: 'rgba(255,255,255,0.9)', lineHeight: '1.4' }}>
+                {item.baseRecommendation.advice}
+              </p>
+              {item.baseRecommendation.impact && (
+                <div style={{ fontSize: '11px', marginTop: '6px', color: 'rgba(255,255,255,0.5)', fontStyle: 'italic' }}>
+                  Impacto: {item.baseRecommendation.impact}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Botão de Auditoria SQL */}
           <div style={{ marginBottom: 15, padding: '0 10px' }}>
             <button 
