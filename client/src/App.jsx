@@ -52,7 +52,11 @@ function App() {
   return (
     <div className="app-container">
       {connectionInfo ? (
-        <Dashboard connectionInfo={connectionInfo} onDisconnect={handleDisconnect} />
+        <Dashboard 
+          connectionInfo={connectionInfo} 
+          onDisconnect={handleDisconnect} 
+          onUpdateConnection={setConnectionInfo} 
+        />
       ) : (
         <ConnectForm onConnected={handleConnect} />
       )}

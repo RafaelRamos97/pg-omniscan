@@ -1,5 +1,13 @@
 import { useState, useEffect } from 'react';
-import { runStreamingAnalysis, disconnectDB, getScriptsMetadata } from '../api';
+import { 
+  runStreamingAnalysis, 
+  disconnectDB, 
+  getScriptsMetadata, 
+  getHistory, 
+  getAnalysisDetail,
+  getDatabases,
+  switchDatabase 
+} from '../api';
 import CategorySection from './CategorySection';
 import Recommendations from './Recommendations';
 import AIPanel from './AIPanel';
@@ -8,7 +16,7 @@ import { exportToPDF, exportToMarkdown } from '../utils/exporter';
 import StreamingConsole from './StreamingConsole';
 import OverviewMetrics from './OverviewMetrics';
 
-export default function Dashboard({ connectionInfo, onDisconnect }) {
+export default function Dashboard({ connectionInfo, onDisconnect, onUpdateConnection }) {
   const [analysis, setAnalysis] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -18,6 +26,8 @@ export default function Dashboard({ connectionInfo, onDisconnect }) {
   const [progress, setProgress] = useState({ percent: 0, message: '', logs: [] });
 
   const [availableCategories, setAvailableCategories] = useState([]);
+  const [availableDatabases, setAvailableDatabases] = useState([]);
+  const [switchingDb, setSwitchingDb] = useState(false);
   
   // Carrega preferências iniciais do localStorage
   const [selectedCategories, setSelectedCategories] = useState(() => {
@@ -42,15 +52,44 @@ export default function Dashboard({ connectionInfo, onDisconnect }) {
   }, [excludedScripts]);
 
   useEffect(() => {
-    loadCategories();
+    loadInitialData();
   }, []);
 
-  const loadCategories = async () => {
+  const loadInitialData = async () => {
     try {
+      const [cats, dbs] = await Promise.all([
+        getScriptsMetadata(),
+        getDatabases()
+      ]);
+      setAvailableCategories(cats);
+      setAvailableDatabases(dbs);
+    } catch (err) {
+      setError('Erro ao carregar metadados: ' + err.message);
+    }
+  };
+
+  const handleSwitchDatabase = async (newDb) => {
+    if (newDb === connectionInfo.dbname) return;
+    
+    setSwitchingDb(true);
+    setError('');
+    try {
+      const result = await switchDatabase(newDb);
+      // Notifica o componente pai para atualizar o connectionInfo global
+      onUpdateConnection({
+        ...connectionInfo,
+        dbname: result.dbname,
+        database: result.dbname
+      });
+      // Limpa análise atual e recarrega categorias (podem mudar por versão)
+      setAnalysis(null);
+      setActiveTab('select');
       const cats = await getScriptsMetadata();
       setAvailableCategories(cats);
     } catch (err) {
-      setError('Erro ao carregar metadados: ' + err.message);
+      setError('Erro ao trocar de banco: ' + err.message);
+    } finally {
+      setSwitchingDb(false);
     }
   };
 
@@ -94,6 +133,39 @@ export default function Dashboard({ connectionInfo, onDisconnect }) {
 
   const [abortController, setAbortController] = useState(null);
 
+  const calculateDelta = async (currentAnalysis) => {
+    try {
+      const history = await getHistory();
+      // Encontra a análise anterior para o MESMO banco, excluindo a que acabou de ser salva
+      const previous = history.find(h => h.database === currentAnalysis.database && h.id !== currentAnalysis.savedAs);
+      
+      if (!previous) return currentAnalysis;
+
+      const prevDetail = await getAnalysisDetail(previous.id);
+      
+      // Itera sobre as categorias e scripts para calcular o delta
+      const enrichedCategories = { ...currentAnalysis.categories };
+      
+      Object.keys(enrichedCategories).forEach(catName => {
+        enrichedCategories[catName] = enrichedCategories[catName].map(currentScript => {
+          const prevCat = prevDetail.categories[catName] || [];
+          const prevScript = prevCat.find(s => s.baseName === currentScript.baseName);
+          
+          if (prevScript) {
+            const delta = currentScript.rowCount - prevScript.rowCount;
+            return { ...currentScript, delta };
+          }
+          return currentScript;
+        });
+      });
+
+      return { ...currentAnalysis, deltaInfo: { comparedTo: previous.date }, categories: enrichedCategories };
+    } catch (err) {
+      console.warn('Falha ao calcular delta:', err);
+      return currentAnalysis;
+    }
+  };
+
   const handleAnalyze = async () => {
     if (selectedCategories.length === 0) {
       setError('Selecione ao menos uma categoria para analisar.');
@@ -107,7 +179,7 @@ export default function Dashboard({ connectionInfo, onDisconnect }) {
     setProgress({ percent: 0, message: 'Iniciando diagnóstico...', logs: [] });
     
     try {
-      await runStreamingAnalysis(selectedCategories, (msg) => {
+      await runStreamingAnalysis(selectedCategories, async (msg) => {
         if (msg.type === 'progress' || msg.type === 'status') {
           setProgress(prev => ({
             percent: msg.percent !== undefined ? msg.percent : prev.percent,
@@ -115,7 +187,9 @@ export default function Dashboard({ connectionInfo, onDisconnect }) {
             logs: msg.message ? [msg.message, ...prev.logs].slice(0, 10) : prev.logs
           }));
         } else if (msg.type === 'complete') {
-          setAnalysis(msg.data);
+          // Calcula Delta antes de exibir
+          const enriched = await calculateDelta(msg.data);
+          setAnalysis(enriched);
           setLoading(false);
           setActiveTab('analysis');
           setAbortController(null);
@@ -174,15 +248,70 @@ export default function Dashboard({ connectionInfo, onDisconnect }) {
 
       <div className="app-main">
         <div className="dashboard-header">
-          <div>
-            <h1>🐘 PG Health Analyzer</h1>
-            <div className="db-info">
-              Conectado a <strong>{connectionInfo.config.database}</strong> em {connectionInfo.config.host}:{connectionInfo.config.port}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+            <div className="brand-logo" style={{ fontSize: '20px' }}>⚡ PG-OmniScan</div>
+            
+            {/* Database Switcher */}
+            <div className="db-switcher" style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '8px', 
+              background: 'rgba(255,255,255,0.05)',
+              padding: '6px 16px',
+              borderRadius: '20px',
+              border: '1px solid rgba(255,255,255,0.1)',
+              position: 'relative',
+              transition: 'all 0.2s ease',
+              cursor: 'pointer'
+            }}>
+              <span style={{ fontSize: '12px', opacity: 0.6 }}>Database:</span>
+              {switchingDb ? (
+                <div className="spinner-small" style={{ width: '16px', height: '16px', borderTopColor: '#50fa7b' }} />
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <select 
+                    value={connectionInfo.dbname} 
+                    onChange={(e) => handleSwitchDatabase(e.target.value)}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: 'var(--accent-glow)',
+                      fontWeight: '700',
+                      fontSize: '14px',
+                      cursor: 'pointer',
+                      outline: 'none',
+                      appearance: 'none',
+                      WebkitAppearance: 'none',
+                      MozAppearance: 'none',
+                      paddingRight: '16px' // Espaço para a seta customizada
+                    }}
+                  >
+                    {availableDatabases.map(db => (
+                      <option key={db} value={db} style={{ background: '#1e293b', color: '#f8fafc' }}>
+                        {db}
+                      </option>
+                    ))}
+                  </select>
+                  {/* Seta Customizada Elegante */}
+                  <svg 
+                    width="10" height="6" viewBox="0 0 10 6" fill="none" 
+                    style={{ position: 'absolute', right: '14px', pointerEvents: 'none', opacity: 0.7 }}
+                  >
+                    <path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </div>
+              )}
+            </div>
+            
+            <div className="connection-badge">
+              <span className="pulse-dot"></span>
+              {connectionInfo.host}:{connectionInfo.port}
             </div>
           </div>
-          <div className="dashboard-actions">
-            <button className="btn btn-danger" onClick={handleDisconnect}>
-              Desconectar
+
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button className="btn btn-outline-danger" onClick={handleDisconnect}>
+              <span style={{ fontSize: '14px' }}>Desconectar</span>
             </button>
           </div>
         </div>

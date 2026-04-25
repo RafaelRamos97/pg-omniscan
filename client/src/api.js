@@ -28,6 +28,24 @@ export async function getCategories() {
   return res.json();
 }
 
+export async function getDatabases() {
+  const res = await fetch(`${API_URL}/databases`);
+  return res.json();
+}
+
+export async function switchDatabase(database) {
+  const res = await fetch(`${API_URL}/switch-database`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ database }),
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error);
+  }
+  return res.json();
+}
+
 export async function runAnalysis(categories) {
   const res = await fetch(`${API_URL}/analyze`, {
     method: 'POST',

@@ -95,6 +95,15 @@ class DBService {
   }
 
   /**
+   * Obtém lista de bancos de dados disponíveis para troca rápida.
+   */
+  async getDatabases() {
+    const sql = "SELECT datname FROM pg_database WHERE datallowconn = true AND datistemplate = false ORDER BY datname";
+    const rows = await this.query(sql);
+    return rows.map(r => r.datname);
+  }
+
+  /**
    * Retorna o status atual da conexão e configurações básicas.
    */
   getStatus() {

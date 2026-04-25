@@ -49,6 +49,33 @@ app.get('/api/categories', (req, res) => {
   res.json(analyzer.getAvailableCategories());
 });
 
+// Lista todos os bancos da instância
+app.get('/api/databases', async (req, res) => {
+  try {
+    const dbs = await dbService.getDatabases();
+    res.json(dbs);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Troca de banco rápida (reaproveita credenciais)
+app.post('/api/switch-database', async (req, res) => {
+  try {
+    const { database } = req.body;
+    if (!database) return res.status(400).json({ error: 'Banco de dados não especificado.' });
+
+    const currentConfig = dbService.config;
+    if (!currentConfig) return res.status(400).json({ error: 'Nenhuma conexão ativa encontrada.' });
+
+    const newConfig = { ...currentConfig, database };
+    const result = await dbService.connect(newConfig);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Lista de scripts detalhados por categoria (para seleção granular)
 app.get('/api/scripts/metadata', async (req, res) => {
   try {
