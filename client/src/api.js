@@ -144,3 +144,8 @@ export async function clearAllHistory() {
   const res = await fetch(`${API_URL}/history`, { method: 'DELETE' });
   return res.json();
 }
+
+export async function syncArsenal() {
+  const res = await fetch(`${API_URL}/scripts/sync`, { method: 'POST' });
+  return res.json();
+}

@@ -29,12 +29,13 @@ class SyncService {
       fs.mkdirSync(SCRIPTS_DEST, { recursive: true });
     }
 
-    // 2. Extração Seletiva (apenas da pasta sql/)
+    // 2. Extração Seletiva
     zipEntries.forEach(entry => {
+      const fileName = path.basename(entry.entryName);
+      
+      // Scripts SQL (dentro de /sql/)
       if (entry.entryName.includes('/sql/') && entry.entryName.endsWith('.sql')) {
-        const fileName = path.basename(entry.entryName);
         const destPath = path.join(SCRIPTS_DEST, fileName);
-        
         const exists = fs.existsSync(destPath);
         const newContent = entry.getData().toString('utf8');
         
@@ -48,6 +49,13 @@ class SyncService {
           fs.writeFileSync(destPath, newContent);
           addedFiles.push(fileName);
         }
+      } 
+      // Documentação (Arquivos MD na raiz do repositório)
+      else if (entry.entryName.split('/').length === 2 && entry.entryName.endsWith('.md')) {
+        const docDest = path.join(__dirname, '../../../pg_scripts', fileName);
+        const newContent = entry.getData().toString('utf8');
+        fs.writeFileSync(docDest, newContent);
+        // Contamos documentação como atualização silenciosa para não poluir o banner principal
       }
     });
 

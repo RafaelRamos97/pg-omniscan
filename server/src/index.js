@@ -9,6 +9,7 @@ const dbService = require('./services/db-service');
 const analyzer = require('./services/analyzer');
 const aiService = require('./services/ai-service');
 const storageService = require('./services/storage-service');
+const syncService = require('./services/sync-service');
 
 const app = express();
 
@@ -94,6 +95,17 @@ app.get('/api/scripts/metadata', async (req, res) => {
     res.json(metadata);
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// Sincroniza arsenal com repositório original do Fabio
+app.post('/api/scripts/sync', async (req, res) => {
+  try {
+    const result = await syncService.syncArsenal();
+    res.json(result);
+  } catch (err) {
+    console.error('[Sync] Erro ao sincronizar:', err);
+    res.status(500).json({ error: `Falha na sincronização: ${err.message}` });
   }
 });
 
