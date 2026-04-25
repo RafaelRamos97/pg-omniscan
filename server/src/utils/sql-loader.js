@@ -111,8 +111,7 @@ class SQLLoader {
       
       const shouldSkip = inBlockComment || 
                          trimmed.startsWith('\\') || 
-                         trimmed.startsWith('--') || 
-                         /^(SET|RESET)\s+/i.test(trimmed);
+                         trimmed.startsWith('--');
 
       if (!shouldSkip) {
         cleanedLines.push(line);
@@ -152,9 +151,16 @@ class SQLLoader {
         const minor = parseInt(vStr[1]);
         minVersion = major * 10000 + minor * 100;
       } else {
-        // PG 10+: two or three digits mean major versions (e.g., 10 = 10.0 = 100000, 12 = 120000, 140 = 140000)
+        // PG 10+: two or three digits mean major versions 
+        // e.g., 10 = 100000, 14 = 140000, 140 = 140000
         const major = parseInt(vStr);
-        minVersion = major >= 100 ? major * 100 : major * 10000;
+        if (major >= 10 && major < 100) {
+          minVersion = major * 10000;
+        } else if (major >= 100) {
+          minVersion = major * 100;
+        } else {
+          minVersion = major * 10000; // Fallback
+        }
       }
 
       return { baseName, minVersion, isVersioned: true };
@@ -184,6 +190,15 @@ class SQLLoader {
    */
   getCompatibleScripts(pgVersionNum) {
     const scriptsByBase = {};
+    
+    // Scripts conhecidos por falhar em drivers Node.js apesar da versão reportada (devido ao psql-only logic)
+    const knownIncompatible = [
+      { baseName: 'statements_calls', minVersion: 170000 },
+      { baseName: 'statements_rows_call', minVersion: 170000 },
+      { baseName: 'statements_wal', minVersion: 170000 },
+      { baseName: 'statements_time', minVersion: 170000 },
+      { baseName: 'statements_rows', minVersion: 170000 }
+    ];
 
     for (const script of this.scripts) {
       // Pula scripts com maxVersion se o PG é mais recente
@@ -191,6 +206,11 @@ class SQLLoader {
       
       // Pula se a versão mínima é maior que a do PG
       if (script.minVersion > pgVersionNum) continue;
+
+      // Pula se for uma incompatibilidade conhecida com o driver Node (psql-only hacks)
+      if (knownIncompatible.some(ki => ki.baseName === script.baseName && ki.minVersion === script.minVersion)) {
+        continue;
+      }
 
       const current = scriptsByBase[script.baseName];
       if (!current || script.minVersion > current.minVersion) {

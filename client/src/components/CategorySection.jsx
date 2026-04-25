@@ -5,6 +5,7 @@ function ScriptItem({ item }) {
   const hasError = !!item.error;
   // Expande por padrão se tiver erro ou se tiver dados relevantes
   const [isExpanded, setIsExpanded] = useState(hasData || hasError);
+  const [showSql, setShowSql] = useState(false);
 
   const scriptTitle = (item.baseName || item.script || '').replace(/_/g, ' ').replace('.sql', '').toUpperCase();
 
@@ -32,15 +33,33 @@ function ScriptItem({ item }) {
         <span style={{ flex: 1 }}>{scriptTitle}</span>
         
         {hasData && (
-          <span className="count-tag" style={{ 
-            fontSize: '10px', 
-            background: 'var(--accent-glow)', 
-            padding: '2px 8px', 
-            borderRadius: '10px',
-            color: '#fff'
-          }}>
-            {item.data.length} achados
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {item.delta !== undefined && (
+              <span style={{ 
+                fontSize: '11px', 
+                fontWeight: 800, 
+                color: item.delta > 0 ? '#ff4444' : (item.delta < 0 ? '#10b981' : 'rgba(255,255,255,0.3)'),
+                background: 'rgba(0,0,0,0.2)',
+                padding: '2px 6px',
+                borderRadius: '6px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '2px'
+              }}>
+                {item.delta > 0 ? '▲' : (item.delta < 0 ? '▼' : '●')}
+                {item.delta !== 0 && Math.abs(item.delta)}
+              </span>
+            )}
+            <span className="count-tag" style={{ 
+              fontSize: '10px', 
+              background: 'var(--accent-glow)', 
+              padding: '2px 8px', 
+              borderRadius: '10px',
+              color: '#fff'
+            }}>
+              {item.data.length} achados
+            </span>
+          </div>
         )}
         
         {hasError && <span style={{ color: '#ef4444', fontSize: '11px', fontWeight: 'bold' }}>⚠️ ERRO</span>}
@@ -59,6 +78,46 @@ function ScriptItem({ item }) {
 
       {isExpanded && (
         <div className="script-body" style={{ padding: '15px 5px 5px 5px' }}>
+          {/* Botão de Auditoria SQL */}
+          <div style={{ marginBottom: 15, padding: '0 10px' }}>
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowSql(!showSql);
+              }}
+              style={{
+                background: 'rgba(255,255,255,0.05)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                color: 'rgba(255,255,255,0.6)',
+                padding: '4px 10px',
+                borderRadius: '4px',
+                fontSize: '11px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px'
+              }}
+            >
+              {showSql ? '✕ Fechar SQL' : '🔍 Ver SQL de Auditoria'}
+            </button>
+            
+            {showSql && (
+              <pre style={{ 
+                marginTop: 10, 
+                padding: 12, 
+                background: '#000', 
+                color: '#50fa7b', 
+                fontSize: '11px', 
+                borderRadius: '6px',
+                overflowX: 'auto',
+                border: '1px solid #333',
+                maxHeight: '200px'
+              }}>
+                {item.content || '-- SQL não disponível para este item'}
+              </pre>
+            )}
+          </div>
+
           {item.data && item.data.length > 0 ? (
             <div className="data-table-wrapper" style={{ maxHeight: '400px', overflowY: 'auto' }}>
               <table className="data-table">

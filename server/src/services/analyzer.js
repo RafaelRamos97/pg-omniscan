@@ -213,6 +213,7 @@ class Analyzer {
         report.categories[catName].push({
           script: script.fileName,
           baseName: script.baseName,
+          content: script.content, // Incluído para auditoria DBA
           data: data || [],
           rowCount: (data || []).length
         });
