@@ -5,6 +5,22 @@
 class IntelligenceService {
   constructor() {
     this.rules = {
+      // --- SEGURANÇA & ACESSOS (FASE 1) ---
+      'pg_hba': {
+        title: 'Vulnerabilidade de Autenticação (pg_hba.conf)',
+        severity: 'critical',
+        condition: (row) => row.auth_method === 'trust' && row.address && !row.address.startsWith('127.0.0.1') && !row.address.startsWith('::1'),
+        advice: 'O método "trust" está configurado para conexões remotas. Isso permite que qualquer pessoa na rede conecte-se sem senha. Altere para "scram-sha-256" ou "md5" imediatamente.',
+        impact: 'Acesso total e irrestrito ao banco de dados por qualquer cliente na faixa de IP permitida.'
+      },
+      'user_priv': {
+        title: 'Usuários com Superpoderes',
+        severity: 'warning',
+        condition: (row) => row.super === 'X' && row.role !== 'postgres',
+        advice: (row) => `O usuário '${row.role}' possui privilégios de SUPERUSER. Avalie se isso é estritamente necessário ou aplique o princípio do menor privilégio.`,
+        impact: 'Um superusuário comprometido pode apagar todo o cluster, ler arquivos do SO e contornar todas as regras de segurança.'
+      },
+
       // --- BLOAT & ESPAÇO ---
       'index_bloat_approx': {
         title: 'Fragmentação de Índice (Bloat)',
@@ -103,6 +119,57 @@ class IntelligenceService {
           return 'Muitos checkpoints forçados (requested). O ideal é que a maioria seja "timed". Avalie aumentar o max_wal_size.';
         },
         impact: 'Picos massivos de escrita no disco que travam outras operações (I/O Spikes).'
+      },
+
+      // --- TRÁFEGO & SESSÕES (FASE 2) ---
+      'connections_running': {
+        title: 'Queries Longas (Long Running Queries)',
+        severity: 'warning',
+        condition: (row) => {
+          // Q Start e Q Xact vêm no formato HH24:MI:SS. Vamos pegar tudo que tiver horas ou dezenas de minutos (ex: 01:..., ou 00:3...)
+          const qTime = row['Q Start'] || row['Q Xact'] || '';
+          return qTime && !qTime.startsWith('00:00:') && !qTime.startsWith('00:01:') && !qTime.startsWith('00:02:') && !qTime.startsWith('00:03:') && !qTime.startsWith('00:04:') && !qTime.startsWith('00:05:'); // > 5 minutos
+        },
+        advice: 'Há conexões executando ou presas em transação por mais de 5 minutos. Isso pode segurar travas (locks) e impedir que o Vacuum limpe a base (bloat).',
+        impact: 'Causa bloat generalizado e pode levar a enfileiramento de requisições na aplicação.'
+      },
+
+      // --- REPLICAÇÃO & HA (FASE 3) ---
+      'replication_stats': {
+        title: 'Atraso na Replicação (Replication Lag)',
+        severity: 'critical',
+        condition: (row) => {
+          const lag = row['Replay lag'] || row['Write lag'] || '';
+          return lag && lag !== '00:00:00.00' && lag !== '' && !lag.startsWith('00:00:00'); 
+        },
+        advice: 'Detectado atraso significativo entre o servidor primário e a réplica. Verifique a rede ou a carga de CPU/IO da réplica.',
+        impact: 'Em caso de queda do primário, haverá perda de dados não sincronizados e o failover será demorado.'
+      },
+
+      // --- MANUTENÇÃO E ESTRUTURA (FASE 4) ---
+      'tables_without_pk': {
+        title: 'Tabelas sem Chave Primária (PK)',
+        severity: 'warning',
+        condition: () => true, // Qualquer linha retornada é um erro
+        advice: 'Tabelas sem Primary Key ou Unique Index quebram a Replicação Lógica (Publisher/Subscriber) e deixam UPDATES e DELETES muito lentos.',
+        impact: 'Impossibilidade de replicar dados em tempo real e degradação em queries DML.'
+      },
+
+      // --- CONFIGURAÇÃO DE HARDWARE (FASE 5) ---
+      'conf_resource': {
+        title: 'Ajuste de Recursos Inadequado',
+        severity: 'warning',
+        condition: (row) => {
+          if (row.conf === 'checkpoint_completion_target' && parseFloat(row.Value) < 0.9) return true;
+          if (row.conf === 'shared_buffers' && row.source === 'default') return true;
+          return false;
+        },
+        advice: (row) => {
+          if (row.conf === 'checkpoint_completion_target') return 'O checkpoint_completion_target deve estar configurado em 0.9 para diluir as escritas em disco e evitar spikes de I/O.';
+          if (row.conf === 'shared_buffers') return 'O shared_buffers está usando o valor padrão de fábrica. Ele deve ser configurado para usar ~25% da RAM do servidor.';
+          return 'Revise as configurações base do postgresql.conf.';
+        },
+        impact: 'O servidor não está tirando proveito do hardware pago, gerando gargalos artificiais de disco e memória.'
       }
     };
   }
