@@ -51,7 +51,7 @@ export default function Dashboard({ connectionInfo, onDisconnect, onUpdateConnec
     loadInitialData();
   }, []);
 
-  // Efeito para salvar alterações
+  // Persistência de preferências
   useEffect(() => {
     localStorage.setItem('pg_selected_categories', JSON.stringify(selectedCategories));
   }, [selectedCategories]);
@@ -59,10 +59,6 @@ export default function Dashboard({ connectionInfo, onDisconnect, onUpdateConnec
   useEffect(() => {
     localStorage.setItem('pg_excluded_scripts', JSON.stringify(excludedScripts));
   }, [excludedScripts]);
-
-  useEffect(() => {
-    loadInitialData();
-  }, []);
 
   const loadInitialData = async () => {
     try {
