@@ -19,14 +19,16 @@ SELECT
         ,current_setting('server_version_num')::int >= 140000  AS pg_14
         ,current_setting('server_version_num')::int >= 150000  AS pg_15
         ,current_setting('server_version_num')::int >= 160000  AS pg_16
-        ,current_setting('server_version_num')::int >= 170000  AS pg_17
-        ,current_setting('server_version_num')::int >= 180000  AS pg_18
-        ,current_setting('server_version') AS server_version
+	,current_setting('server_version_num')::int >= 170000  AS pg_17
+	,current_setting('server_version') AS server_version
 \gset svp_
 
 
-\if :svp_pg_91
-  \ir extensions_91+.sql
+
+\if :svp_pg_11
+  \ir function_aggregates_11+.sql
+\elif :svp_pg_84
+  \ir function_aggregates_84+.sql
 \else
   \qecho - Not supported on version :svp_server_version
 \endif

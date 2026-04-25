@@ -1,6 +1,6 @@
 SELECT 
-    CASE WHEN n.nspname = 'pg_catalog' THEN 'REINDEX INDEX ' ELSE 'REINDEX INDEX CONCURRENTLY ' END || 
-	n.nspname || '.' || c.relname || '; --' AS command
+    CASE WHEN n.nspname = 'pg_catalog' THEN 'REINDEX INDEX ' ELSE 'REINDEX INDEX CONCURRENTLY "' END || 
+	n.nspname || '"."' || c.relname || '"; --' AS command
     --pg_size_pretty(index_size) AS "Index Size",
     --ltrim(to_char(c.reltuples,'999G999G999G999G999')) AS "Rows",
     --trunc(avg_leaf_density::numeric,1)   AS "Avg Leaf Density",
@@ -19,5 +19,4 @@ WHERE
     AND n.nspname !~ '^pg_toast'
     AND pg_catalog.pg_table_is_visible(c.oid)
     AND (avg_leaf_density <= 70 OR leaf_fragmentation >= 20)
-ORDER BY index_size DESC
-\gexec
+ORDER BY index_size DESC;
