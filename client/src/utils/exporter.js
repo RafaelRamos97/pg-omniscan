@@ -62,70 +62,170 @@ export const exportToMarkdown = (analysis, connectionConfig) => {
 export const exportToPDF = (analysis, connectionConfig) => {
   try {
     const doc = new jsPDF('landscape');
+    const timestamp = new Date(analysis.timestamp).toLocaleString();
     
-    // Cabeçalho
-    doc.setFontSize(22);
-    doc.text('PG-OmniScan: Relatorio Oficial Executivo', 14, 20);
+    // 🎨 CAPA PROFISSIONAL
+    doc.setFillColor(23, 24, 37); // Cor de fundo do app
+    doc.rect(0, 0, 300, 210, 'F');
     
-    doc.setFontSize(12);
-    doc.setTextColor(100, 100, 100);
-    doc.text(`Banco Destino: ${connectionConfig.database}`, 14, 30);
-    doc.text(`Criado em: ${new Date(analysis.timestamp).toLocaleString()}`, 14, 36);
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(40);
+    doc.setFont('helvetica', 'bold');
+    doc.text('PG-OmniScan', 148, 80, { align: 'center' });
     
-    let startYPos = 46;
+    doc.setFontSize(20);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Relatório de Diagnóstico e Saúde PostgreSQL', 148, 95, { align: 'center' });
+    
+    doc.setDrawColor(99, 102, 241);
+    doc.setLineWidth(1);
+    doc.line(100, 105, 200, 105);
+    
+    doc.setFontSize(14);
+    doc.text(`Banco de Dados: ${connectionConfig.database}`, 148, 120, { align: 'center' });
+    doc.text(`Instância: ${connectionConfig.host}:${connectionConfig.port}`, 148, 130, { align: 'center' });
+    doc.text(`Data da Emissão: ${timestamp}`, 148, 140, { align: 'center' });
+    
+    doc.setFontSize(10);
+    doc.setTextColor(150, 150, 150);
+    doc.text('Documento gerado automaticamente pelo motor de diagnóstico PG-OmniScan.', 148, 190, { align: 'center' });
+    doc.text('Base de Conhecimento: fabiotr/pg_scripts', 148, 195, { align: 'center' });
+
+    // 📄 PÁGINA 2: SUMÁRIO EXECUTIVO
+    doc.addPage();
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(24);
+    doc.setFont('helvetica', 'bold');
+    doc.text('1. Sumário Executivo', 14, 25);
+    
+    const statsBody = [
+      ['Total de Scripts Executados', String(analysis.stats.executed)],
+      ['Achados Relevantes', String(analysis.recommendations?.length || 0)],
+      ['Scripts Sem Achados (Saudáveis)', String(analysis.stats.empty)],
+      ['Erros de Execução/Permissão', String(analysis.stats.errors)],
+      ['Versão do PostgreSQL', `${Math.floor(analysis.version/10000)}.${(analysis.version%10000)/100}`],
+      ['Estatísticas coletadas desde', analysis.stats_reset || 'Desconhecido']
+    ];
+
+    autoTable(doc, {
+      startY: 35,
+      body: statsBody,
+      theme: 'grid',
+      styles: { fontSize: 12, cellPadding: 5 },
+      columnStyles: { 0: { fontStyle: 'bold', fillColor: [245, 245, 245], cellWidth: 80 } }
+    });
+
+    // 📄 RECOMENDAÇÕES PRIORIZADAS
     if (analysis.recommendations && analysis.recommendations.length > 0) {
-      doc.setFontSize(16);
-      doc.setTextColor(0, 0, 0);
-      doc.text('Avisos & Recomendações Acionáveis', 14, startYPos);
+      doc.addPage();
+      doc.setFontSize(24);
+      doc.text('2. Recomendações Críticas e Ações', 14, 25);
       
+      const priorityColors = {
+        'CRITICAL': [239, 68, 68],
+        'HIGH': [245, 158, 11],
+        'MEDIUM': [99, 102, 241],
+        'LOW': [107, 114, 128]
+      };
+
       const recsBody = analysis.recommendations.map(r => [
         r.priority, 
         r.category, 
         r.message, 
+        r.rationale,
         r.action
       ]);
 
       autoTable(doc, {
-        startY: startYPos + 4,
-        head: [['Risco', 'Categoria', 'Diagnóstico/Motivo', 'Plano da Ação']],
+        startY: 35,
+        head: [['Nível', 'Área', 'Achado', 'Raciocínio DBA', 'Ação Sugerida']],
         body: recsBody,
-        headStyles: { fillColor: [99, 102, 241] },
         theme: 'grid',
-        columnStyles: { 
-          0: { fontStyle: 'bold', halign: 'center', cellWidth: 25 },
-          1: { cellWidth: 40 },
+        styles: { fontSize: 9, cellPadding: 3 },
+        headStyles: { fillColor: [23, 24, 37] },
+        didParseCell: (data) => {
+          if (data.section === 'body' && data.column.index === 0) {
+            const color = priorityColors[data.cell.raw] || [0, 0, 0];
+            data.cell.styles.textColor = color;
+            data.cell.styles.fontStyle = 'bold';
+          }
+        },
+        columnStyles: {
+          0: { halign: 'center', cellWidth: 20 },
+          1: { cellWidth: 30 },
+          3: { cellWidth: 80 },
+          4: { fontStyle: 'bold', textColor: [0, 100, 0], cellWidth: 80 }
         }
       });
     }
 
-    // Tabelas por Categoria
+    // 📄 DETALHAMENTO TÉCNICO (Scripts Originais)
+    doc.addPage();
+    doc.setFontSize(24);
+    doc.text('3. Detalhamento Técnico (Scripts)', 14, 25);
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Abaixo constam os dados brutos extraídos diretamente dos scripts de diagnóstico.', 14, 35);
+
+    let currentY = 45;
     Object.entries(analysis.categories || {}).forEach(([catName, scripts]) => {
       scripts.forEach(script => {
         const rows = script.data || [];
         if (rows.length > 0) {
-          doc.addPage();
-          doc.setFontSize(18);
-          doc.text(`Dados Brutos: ${script.name || script.baseName}`, 14, 20);
+          // Verifica se cabe na página ou precisa de nova
+          if (currentY > 180) {
+            doc.addPage();
+            currentY = 25;
+          }
+
+          doc.setFontSize(14);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(99, 102, 241);
+          doc.text(`> ${catName.toUpperCase()}: ${script.baseName.replace(/_/g, ' ')}`, 14, currentY);
+          doc.setTextColor(0, 0, 0);
           
           const keys = Object.keys(rows[0]);
-          const tableBody = rows.map(r => keys.map(k => (r[k] !== null && r[k] !== undefined) ? String(r[k]) : '-'));
-          
+          const tableBody = rows.slice(0, 50).map(r => keys.map(k => {
+            let val = r[k];
+            if (val === null || val === undefined) return '-';
+            if (typeof val === 'boolean') return val ? 'SIM' : 'NÃO';
+            return String(val);
+          }));
+
           autoTable(doc, {
-            startY: 30,
+            startY: currentY + 5,
             head: [keys],
             body: tableBody,
-            styles: { fontSize: 8, cellPadding: 2 },
-            headStyles: { fillColor: [50, 50, 50] },
+            styles: { fontSize: 7, cellPadding: 1.5, overflow: 'linebreak' },
+            headStyles: { fillColor: [60, 60, 60] },
             theme: 'striped',
-            horizontalPageBreak: true
+            margin: { left: 14, right: 14 },
+            didDrawPage: (data) => {
+              currentY = data.cursor.y + 15;
+            }
           });
+          
+          if (rows.length > 50) {
+            doc.setFontSize(8);
+            doc.setFont('helvetica', 'italic');
+            doc.text(`* Exibindo apenas as primeiras 50 de ${rows.length} linhas para este script.`, 14, currentY - 8);
+          }
         }
       });
     });
 
+    // Rodapé em todas as páginas (exceto capa)
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 2; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(150, 150, 150);
+      doc.text(`PG-OmniScan Auditoria - ${connectionConfig.database} - Página ${i} de ${pageCount}`, 148, 205, { align: 'center' });
+    }
+
     doc.save(`auditoria_${connectionConfig.database}_${Date.now()}.pdf`);
   } catch (err) {
     console.error('Erro detalhado ao gerar PDF:', err);
-    alert('Falha ao gerar o PDF. Verifique se o npm install jspdf jspdf-autotable foi executado no diretório client.');
+    alert('Erro ao gerar o PDF profissional. Verifique os logs.');
   }
 };
