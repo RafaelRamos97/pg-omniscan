@@ -129,7 +129,7 @@ function ScriptItem({ item }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {item.data.map((row, rowIdx) => (
+                  {item.data.slice(0, 100).map((row, rowIdx) => (
                     <tr key={rowIdx}>
                       {Object.values(row).map((val, colIdx) => (
                         <td key={colIdx}>{val !== null && val !== undefined ? String(val) : '—'}</td>
@@ -138,6 +138,19 @@ function ScriptItem({ item }) {
                   ))}
                 </tbody>
               </table>
+              {item.data.length > 100 && (
+                <div style={{ 
+                  padding: '12px', 
+                  textAlign: 'center', 
+                  fontSize: '11px', 
+                  color: 'var(--text-muted)',
+                  background: 'rgba(0,0,0,0.2)',
+                  borderTop: '1px solid var(--border-color)'
+                }}>
+                  💡 Mais {item.data.length - 100} linhas ocultas para manter a performance. 
+                  <strong> Exporte o PDF para visualizar o relatório completo.</strong>
+                </div>
+              )}
             </div>
           ) : (
             item.error ? (

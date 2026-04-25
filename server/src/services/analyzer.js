@@ -113,9 +113,14 @@ class Analyzer {
    * Orquestrador Principal da Análise
    */
   async runAnalysis(selectedCategories, onProgress, checkCancelled, excludedScripts = []) {
-    const notify = (msg, percent, type = 'status') => {
-      console.log(`[Analyzer] ${msg} (${percent}%)`);
-      if (onProgress) onProgress({ message: msg, percent, type });
+    const notify = (data, percent, type = 'status') => {
+      if (typeof data === 'object') {
+        console.log(`[Analyzer] Evento: ${data.type} (${data.percent || 0}%)`);
+        if (onProgress) onProgress(data);
+      } else {
+        console.log(`[Analyzer] ${data} (${percent}%)`);
+        if (onProgress) onProgress({ type: 'progress', message: data, percent, statusType: type });
+      }
     };
 
     notify('[DEBUG] Iniciando conexão e coleta de metadados...', 2);
@@ -204,19 +209,34 @@ class Analyzer {
       completedTasks++;
 
       const prog = Math.min(20 + Math.floor((completedTasks / totalTasks) * 75), 95);
-      notify(`[${completedTasks}/${totalTasks}] Analisando: ${script.baseName}`, prog, 'status');
+      notify({ 
+        type: 'progress', 
+        message: `[${completedTasks}/${totalTasks}] Analisando: ${script.baseName}`, 
+        percent: prog 
+      });
 
       try {
         const data = await dbService.query(script.content, 60000); // 60s via Protocolo
 
-        if (!report.categories[catName]) report.categories[catName] = [];
-        report.categories[catName].push({
+        const scriptResult = {
           script: script.fileName,
           baseName: script.baseName,
-          content: script.content, // Incluído para auditoria DBA
+          content: script.content,
           data: data || [],
           rowCount: (data || []).length
+        };
+
+        if (!report.categories[catName]) report.categories[catName] = [];
+        report.categories[catName].push(scriptResult);
+        
+        // ENVIO INCREMENTAL: Notifica o frontend com o dado real ASSIM QUE TERMINA
+        notify({ 
+          type: 'script_complete', 
+          catName, 
+          result: scriptResult,
+          percent: prog
         });
+
         report.stats.executed++;
         if (data && data.length === 0) report.stats.empty++;
       } catch (err) {

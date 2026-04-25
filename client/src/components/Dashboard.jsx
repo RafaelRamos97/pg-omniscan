@@ -186,8 +186,35 @@ export default function Dashboard({ connectionInfo, onDisconnect, onUpdateConnec
             message: msg.message || prev.message,
             logs: msg.message ? [msg.message, ...prev.logs].slice(0, 10) : prev.logs
           }));
+        } else if (msg.type === 'script_complete') {
+          // ATUALIZAÇÃO EM TEMPO REAL: Injeta o resultado do script na UI na hora
+          setAnalysis(prev => {
+            const current = prev || { 
+              categories: {}, 
+              recommendations: [], 
+              stats: { total: selectedCategories.length, executed: 0, empty: 0 },
+              timestamp: new Date().toISOString()
+            };
+            
+            const catName = msg.catName;
+            const newCategories = { ...current.categories };
+            if (!newCategories[catName]) newCategories[catName] = [];
+            
+            // Adiciona se não existir (evita duplicados em retry)
+            if (!newCategories[catName].some(s => s.baseName === msg.result.baseName)) {
+              newCategories[catName].push(msg.result);
+            }
+
+            return { ...current, categories: newCategories };
+          });
+          
+          setProgress(prev => ({ ...prev, percent: msg.percent }));
+          
+          // Muda para a aba de análise assim que o primeiro dado chegar
+          if (activeTab !== 'analysis') setActiveTab('analysis');
+
         } else if (msg.type === 'complete') {
-          // Calcula Delta antes de exibir
+          // Finaliza com o objeto completo e calcula deltas
           const enriched = await calculateDelta(msg.data);
           setAnalysis(enriched);
           setLoading(false);
