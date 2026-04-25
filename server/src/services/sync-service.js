@@ -33,6 +33,13 @@ class SyncService {
     zipEntries.forEach(entry => {
       const fileName = path.basename(entry.entryName);
       
+      // Ignorar pastas e arquivos desnecessários
+      if (entry.entryName.includes('/shell/') || 
+          entry.entryName.includes('/bin/') || 
+          fileName === 'psqlrc') {
+        return;
+      }
+      
       // Scripts SQL (dentro de /sql/)
       if (entry.entryName.includes('/sql/') && entry.entryName.endsWith('.sql')) {
         const destPath = path.join(SCRIPTS_DEST, fileName);
