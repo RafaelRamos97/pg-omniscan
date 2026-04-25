@@ -93,39 +93,52 @@ function validateSQL(sql) {
 
 /**
  * Validação FINAL e RIGOROSA do conteúdo do SQL.
- * Garante que nada além de SELECT ou WITH seja executado.
+ * Garante que nada além de SELECT ou comandos de sessão sejam executados.
  */
 function validateStrictReadOnly(sql) {
   if (!sql || typeof sql !== 'string') return false;
 
-  // 1. Remove comentários de bloco /* ... */ e linha -- ...
+  // 1. Limpeza inicial de comentários para análise
   const cleanSql = sql
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/--.*$/gm, '')
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .replace(/--.*$/gm, ' ')
     .trim();
 
   if (cleanSql === '') return false;
 
-  // 2. Deve começar com SELECT, WITH ou SHOW (ignora case)
-  const startsWithSafe = /^(SELECT|WITH|SHOW)\b/i.test(cleanSql);
-  if (!startsWithSafe) {
-    console.error('[SQL Guard] BLOQUEIO CRÍTICO: Query não inicia com SELECT/WITH/SHOW.');
-    return false;
-  }
+  // 2. Quebra por ponto e vírgula para validar comandos múltiplos
+  const statements = cleanSql.split(';').map(s => s.trim()).filter(s => s.length > 0);
 
-  // 3. Busca por palavras-chave proibidas que não estejam entre aspas simples ou duplas
-  const forbiddenKeywords = ['INSERT', 'UPDATE', 'DELETE', 'DROP', 'TRUNCATE', 'ALTER', 'GRANT', 'REVOKE', 'CREATE', 'REINDEX', 'VACUUM', 'ANALYZE', 'SET', 'RESET', 'LISTEN', 'NOTIFY'];
-  
-  // Remove strings e identificadores entre aspas para não pegar labels como "Rows DELETE"
-  const wordsToInspect = cleanSql
-    .replace(/'[^']*'/g, ' ')  // Remove 'strings'
-    .replace(/"[^"]*"/g, ' '); // Remove "aliases/identifiers"
-  
-  for (const kw of forbiddenKeywords) {
-    const regex = new RegExp(`\\b${kw}\\b`, 'i');
-    if (regex.test(wordsToInspect)) {
-      console.error(`[SQL Guard] BLOQUEIO CRÍTICO: Palavra reservada "${kw}" detectada em comando ativo.`);
+  const safeStartKeywords = /^(SELECT|WITH|SHOW|SET|RESET)\b/i;
+  const forbiddenKeywords = ['INSERT', 'UPDATE', 'DELETE', 'DROP', 'TRUNCATE', 'ALTER', 'GRANT', 'REVOKE', 'CREATE', 'REINDEX', 'VACUUM', 'ANALYZE', 'LISTEN', 'NOTIFY', 'COPY'];
+
+  for (const stmt of statements) {
+    // 2.1 Verifica se o comando começa com palavra permitida
+    if (!safeStartKeywords.test(stmt)) {
+      console.error(`[SQL Guard] BLOQUEIO: Comando não inicia com keyword permitida: "${stmt.substring(0, 20)}..."`);
       return false;
+    }
+
+    // 2.2 Se for SET ou RESET, verifica se é uma variável de sessão segura
+    if (/^(SET|RESET)\b/i.test(stmt)) {
+      // Bloqueia tentativas de mudar usuário ou privilégios
+      if (/\b(ROLE|SESSION AUTHORIZATION|PASSWORD|ENCRYPTION)\b/i.test(stmt)) {
+        console.error(`[SQL Guard] BLOQUEIO: Tentativa de alteração de privilégios via SET/RESET.`);
+        return false;
+      }
+    }
+
+    // 2.3 Busca por keywords proibidas (DML/DDL) fora de aspas
+    const wordsToInspect = stmt
+      .replace(/'[^']*'/g, ' ')  
+      .replace(/"[^"]*"/g, ' '); 
+    
+    for (const kw of forbiddenKeywords) {
+      const regex = new RegExp(`\\b${kw}\\b`, 'i');
+      if (regex.test(wordsToInspect)) {
+        console.error(`[SQL Guard] BLOQUEIO CRÍTICO: Keyword "${kw}" detectada.`);
+        return false;
+      }
     }
   }
 

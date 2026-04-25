@@ -1,5 +1,7 @@
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const compression = require('compression');
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
@@ -9,7 +11,15 @@ const aiService = require('./services/ai-service');
 const storageService = require('./services/storage-service');
 
 const app = express();
-app.use(cors());
+
+// SECURITY & PERFORMANCE HARDENING
+app.use(helmet());
+app.use(compression());
+app.use(cors({
+  origin: ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173', 'http://127.0.0.1:3000'],
+  methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
+  credentials: true
+}));
 app.use(express.json());
 
 const PORT = process.env.PORT || 3001;
@@ -98,6 +108,7 @@ app.post('/api/analyze-stream', async (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no'); // Desativa buffering do proxy
 
   const sendEvent = (data) => {
     res.write(`data: ${JSON.stringify(data)}\n\n`);
@@ -110,8 +121,8 @@ app.post('/api/analyze-stream', async (req, res) => {
   });
 
   try {
-    const analysis = await analyzer.runAnalysis(categories, (progress) => {
-      if (!isCancelled) sendEvent({ type: 'progress', ...progress });
+    const analysis = await analyzer.runAnalysis(categories, (event) => {
+      if (!isCancelled) sendEvent(event);
     }, () => isCancelled, excludedScripts || []);
 
     if (isCancelled) {
@@ -178,6 +189,24 @@ app.get('/api/history/:id', async (req, res) => {
     res.json(data);
   } catch (err) {
     res.status(404).json({ error: err.message });
+  }
+});
+
+app.delete('/api/history/:id', async (req, res) => {
+  try {
+    await storageService.deleteAnalysis(req.params.id);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/history', async (req, res) => {
+  try {
+    await storageService.clearHistory();
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
