@@ -192,8 +192,9 @@ app.get('/api/history', async (req, res) => {
   try {
     const list = await storageService.listAnalyses();
     res.json(list);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    console.error('Erro ao listar histórico:', error);
+    res.status(500).json({ error: 'Erro ao listar histórico.' });
   }
 });
 

@@ -81,16 +81,36 @@ export default function HistoryPanel({ onLoad }) {
       </div>
       
       <div className="history-list">
-        {history.map((item) => (
+        {history.map((item, index) => {
+          // Time-Travel Diff: Compara com o item mais antigo (o próximo na lista, pois está DESC)
+          const previousItem = history[index + 1];
+          const diffIssues = previousItem ? item.issuesCount - previousItem.issuesCount : 0;
+          const diffRecs = previousItem ? item.recommendationsCount - previousItem.recommendationsCount : 0;
+          
+          return (
           <div key={item.id} className="history-item" onClick={() => handleLoadAnalysis(item.id)} style={{ position: 'relative' }}>
             <div>
               <div className="hi-date">{new Date(item.date).toLocaleString('pt-BR')}</div>
               <div className="hi-meta">DB: {item.database}</div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-              <div className="hi-meta" style={{ display: 'flex', gap: '10px' }}>
-                <span style={{ color: item.issuesCount > 0 ? '#ff4444' : '#10b981' }}>Problemas: {item.issuesCount}</span>
-                <span style={{ color: 'var(--accent-cyan)' }}>Dicas: {item.recommendationsCount}</span>
+              <div className="hi-meta" style={{ display: 'flex', gap: '15px' }}>
+                <span style={{ color: item.issuesCount > 0 ? '#ff4444' : '#10b981' }}>
+                  Problemas: {item.issuesCount} 
+                  {diffIssues !== 0 && (
+                    <span style={{ fontSize: '10px', marginLeft: '4px', color: diffIssues > 0 ? '#ff4444' : '#10b981' }}>
+                      ({diffIssues > 0 ? '+' : ''}{diffIssues})
+                    </span>
+                  )}
+                </span>
+                <span style={{ color: 'var(--accent-cyan)' }}>
+                  Dicas: {item.recommendationsCount}
+                  {diffRecs !== 0 && (
+                    <span style={{ fontSize: '10px', marginLeft: '4px', color: diffRecs > 0 ? '#f59e0b' : '#10b981' }}>
+                      ({diffRecs > 0 ? '+' : ''}{diffRecs})
+                    </span>
+                  )}
+                </span>
               </div>
               
               <button 
@@ -111,7 +131,7 @@ export default function HistoryPanel({ onLoad }) {
               </button>
             </div>
           </div>
-        ))}
+        )})}
       </div>
     </div>
   );
