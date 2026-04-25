@@ -134,3 +134,13 @@ export async function getAnalysisDetail(id) {
   const res = await fetch(`${API_URL}/history/${id}`);
   return res.json();
 }
+
+export async function deleteHistoryItem(id) {
+  const res = await fetch(`${API_URL}/history/${id}`, { method: 'DELETE' });
+  return res.json();
+}
+
+export async function clearAllHistory() {
+  const res = await fetch(`${API_URL}/history`, { method: 'DELETE' });
+  return res.json();
+}

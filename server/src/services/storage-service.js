@@ -119,6 +119,22 @@ class StorageService {
     
     return JSON.parse(row.raw_json);
   }
+
+  /**
+   * Remove uma análise específica.
+   */
+  async deleteAnalysis(id) {
+    await this._runAsync(`DELETE FROM analyses WHERE id = ?`, [id]);
+    return true;
+  }
+
+  /**
+   * Limpa todo o histórico de análises.
+   */
+  async clearHistory() {
+    await this._runAsync(`DELETE FROM analyses`);
+    return true;
+  }
 }
 
 module.exports = new StorageService();
