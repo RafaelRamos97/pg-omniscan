@@ -242,7 +242,7 @@ function ScriptItem({ item }) {
   );
 }
 
-export default function CategorySection({ name, icon, label, items, status }) {
+export default function CategorySection({ icon, label, items }) {
   const [expanded, setExpanded] = useState(false);
 
   const totalRows = items.reduce((sum, i) => sum + (i.data ? i.data.length : 0), 0);

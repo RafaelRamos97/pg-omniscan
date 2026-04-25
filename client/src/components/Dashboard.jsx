@@ -275,13 +275,6 @@ export default function Dashboard({ connectionInfo, onDisconnect, onUpdateConnec
     exportToMarkdown(analysis, connectionInfo.config);
   };
 
-  const getTotalIssues = () => {
-    if (!analysis) return 0;
-    return Object.values(analysis.categories).reduce((sum, cat) => {
-      return sum + (Array.isArray(cat) ? cat.reduce((s, item) => s + (item.data ? item.data.length : 0), 0) : 0);
-    }, 0);
-  };
-
   return (
     <>
       {loading && (
