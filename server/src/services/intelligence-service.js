@@ -65,6 +65,44 @@ class IntelligenceService {
         condition: (row) => row.wait_event_type === 'Lock' || row.waiting === true,
         advice: 'Existem processos aguardando liberação de travas. Verifique transações longas ou comandos DDL (como ALTER TABLE) em execução.',
         impact: 'Aumento da latência das transações e risco de travamento da aplicação.'
+      },
+
+      // --- MEMÓRIA & CACHE ---
+      'database_stats': {
+        title: 'Cache Hit Ratio Baixo',
+        severity: 'warning',
+        condition: (row) => {
+          const hitRatioStr = row['Cache hit'];
+          if (!hitRatioStr) return false;
+          // Converte "  99.00 %" para 99.00
+          const ratio = parseFloat(hitRatioStr.replace('%', '').trim());
+          return !isNaN(ratio) && ratio < 90;
+        },
+        advice: 'O banco está buscando muitos dados no disco em vez da memória (< 90% de hit ratio). Avalie aumentar o shared_buffers (ideal 25% a 40% da RAM) ou otimizar queries pesadas.',
+        impact: 'Alta latência nas leituras (I/O Bound), deixando o banco lento para os usuários finais.'
+      },
+
+      // --- I/O & WAL ---
+      'checkpoints': {
+        title: 'Frequência de Checkpoints Anormal',
+        severity: (row) => {
+          const reqStr = row['Checkpoints req'];
+          const reqRatio = parseFloat((reqStr || '').replace('%', '').trim());
+          return reqRatio > 50 ? 'critical' : 'warning';
+        },
+        condition: (row) => {
+          const reqStr = row['Checkpoints req'];
+          if (!reqStr) return false;
+          const ratio = parseFloat(reqStr.replace('%', '').trim());
+          return !isNaN(ratio) && ratio > 20; // Mais de 20% forçados já é alerta
+        },
+        advice: (row) => {
+          const reqStr = row['Checkpoints req'];
+          const reqRatio = parseFloat((reqStr || '').replace('%', '').trim());
+          if (reqRatio > 50) return `CRÍTICO: ${reqRatio}% dos checkpoints são forçados por volume de WAL. Aumente max_wal_size URGENTEMENTE para evitar picos catastróficos de I/O de disco.`;
+          return 'Muitos checkpoints forçados (requested). O ideal é que a maioria seja "timed". Avalie aumentar o max_wal_size.';
+        },
+        impact: 'Picos massivos de escrita no disco que travam outras operações (I/O Spikes).'
       }
     };
   }
