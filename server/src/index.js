@@ -64,6 +64,7 @@ app.get('/api/categories', (req, res) => {
 app.get('/api/databases', async (req, res) => {
   try {
     const dbs = await dbService.getDatabases();
+    res.set('Cache-Control', 'private, max-age=60');
     res.json(dbs);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -92,6 +93,7 @@ app.get('/api/scripts/metadata', async (req, res) => {
   try {
     const versionNum = await dbService.getVersionNum();
     const metadata = await analyzer.getDetailedMetadata(versionNum);
+    res.set('Cache-Control', 'private, max-age=60');
     res.json(metadata);
   } catch (err) {
     res.status(500).json({ error: err.message });
