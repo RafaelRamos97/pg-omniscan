@@ -1,5 +1,6 @@
 const dbService = require('./db-service');
 const sqlLoader = require('../utils/sql-loader');
+const intelligenceService = require('./intelligence-service');
 
 const GROUP_CONFIG = {
   overview: { label: 'Visão Geral', icon: '📊', prefix: ['database_', 'report_'] },
@@ -217,13 +218,17 @@ class Analyzer {
 
       try {
         const data = await dbService.query(script.content, 60000); // 60s via Protocolo
+        
+        // ANALISE DE INTELIGÊNCIA DBA
+        const baseRecommendation = intelligenceService.analyze(script.baseName, data);
 
         const scriptResult = {
           script: script.fileName,
           baseName: script.baseName,
           content: script.content,
           data: data || [],
-          rowCount: (data || []).length
+          rowCount: (data || []).length,
+          baseRecommendation // Anexa a inteligência base aqui
         };
 
         if (!report.categories[catName]) report.categories[catName] = [];
