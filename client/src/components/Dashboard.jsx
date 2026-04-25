@@ -6,7 +6,8 @@ import {
   getHistory, 
   getAnalysisDetail,
   getDatabases,
-  switchDatabase 
+  switchDatabase,
+  syncArsenal 
 } from '../api';
 import CategorySection from './CategorySection';
 import Recommendations from './Recommendations';
@@ -28,8 +29,12 @@ export default function Dashboard({ connectionInfo, onDisconnect, onUpdateConnec
   const [availableCategories, setAvailableCategories] = useState([]);
   const [availableDatabases, setAvailableDatabases] = useState([]);
   const [switchingDb, setSwitchingDb] = useState(false);
-  
-  // Carrega preferências iniciais do localStorage
+
+  // Estados de Sincronização do Arsenal
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState(null);
+  const [showSyncDetails, setShowSyncDetails] = useState(false);
+
   const [selectedCategories, setSelectedCategories] = useState(() => {
     const saved = localStorage.getItem('pg_selected_categories');
     return saved ? JSON.parse(saved) : [];
@@ -41,6 +46,10 @@ export default function Dashboard({ connectionInfo, onDisconnect, onUpdateConnec
   });
 
   const [expandedCategory, setExpandedCategory] = useState(null);
+  
+  useEffect(() => {
+    loadInitialData();
+  }, []);
 
   // Efeito para salvar alterações
   useEffect(() => {
@@ -65,6 +74,22 @@ export default function Dashboard({ connectionInfo, onDisconnect, onUpdateConnec
       setAvailableDatabases(dbs);
     } catch (err) {
       setError('Erro ao carregar metadados: ' + err.message);
+    }
+  };
+
+  const handleSyncArsenal = async () => {
+    if (syncing) return;
+    setSyncing(true);
+    setSyncResult(null);
+    try {
+      const result = await syncArsenal();
+      setSyncResult(result);
+      const cats = await getScriptsMetadata();
+      setAvailableCategories(cats);
+    } catch (err) {
+      alert('Erro ao sincronizar arsenal: ' + err.message);
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -334,14 +359,119 @@ export default function Dashboard({ connectionInfo, onDisconnect, onUpdateConnec
               <span className="pulse-dot"></span>
               {connectionInfo.host}:{connectionInfo.port}
             </div>
+
+            {/* Arsenal Sync Button */}
+            <button 
+              className={`btn-sync ${syncing ? 'syncing' : ''}`}
+              onClick={handleSyncArsenal}
+              disabled={syncing}
+              style={{
+                background: syncing ? 'rgba(255,255,255,0.05)' : 'rgba(80, 250, 123, 0.1)',
+                border: '1px solid rgba(80, 250, 123, 0.2)',
+                color: syncing ? 'rgba(255,255,255,0.4)' : '#50fa7b',
+                padding: '6px 14px',
+                borderRadius: '20px',
+                fontSize: '11px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'all 0.2s ease',
+                marginLeft: '10px'
+              }}
+            >
+              <span style={{ fontSize: '14px' }}>{syncing ? '🔄' : '☁️'}</span>
+              {syncing ? 'Sincronizando Arsenal...' : 'Atualizar Arsenal'}
+            </button>
           </div>
 
           <div style={{ display: 'flex', gap: '10px' }}>
-            <button className="btn btn-outline-danger" onClick={handleDisconnect}>
-              <span style={{ fontSize: '14px' }}>Desconectar</span>
+            <button 
+              className="btn btn-outline-danger" 
+              onClick={handleDisconnect}
+              style={{ padding: '6px 16px', borderRadius: '20px', fontSize: '12px' }}
+            >
+              Desconectar
             </button>
           </div>
         </div>
+
+        {syncResult && (
+          <div className="sync-banner" style={{
+            background: 'rgba(80, 250, 123, 0.15)',
+            border: '1px solid rgba(80, 250, 123, 0.3)',
+            color: '#50fa7b',
+            margin: '0 24px 20px 24px',
+            padding: '15px 20px',
+            borderRadius: '12px',
+            fontSize: '13px',
+            position: 'relative'
+          }}>
+            <button 
+              onClick={() => setSyncResult(null)}
+              style={{
+                position: 'absolute',
+                top: '10px',
+                right: '15px',
+                background: 'transparent',
+                border: 'none',
+                color: '#fff',
+                cursor: 'pointer',
+                opacity: 0.5,
+                fontSize: '16px'
+              }}
+              title="Fechar aviso"
+            >
+              ✕
+            </button>
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '15px' }}>
+              <span>🚀 <strong>Arsenal Sincronizado!</strong> {syncResult.added} novos e {syncResult.updated} atualizados.</span>
+              <button 
+                onClick={() => setShowSyncDetails(!showSyncDetails)}
+                style={{
+                  background: 'rgba(255,255,255,0.1)',
+                  border: 'none',
+                  color: '#fff',
+                  padding: '2px 10px',
+                  borderRadius: '4px',
+                  fontSize: '11px',
+                  cursor: 'pointer'
+                }}
+              >
+                {showSyncDetails ? 'Ocultar Detalhes' : 'Ver Detalhes'}
+              </button>
+            </div>
+
+            {showSyncDetails && (
+              <div style={{ 
+                marginTop: '15px', 
+                display: 'grid', 
+                gridTemplateColumns: '1fr 1fr', 
+                gap: '20px', 
+                textAlign: 'left',
+                maxHeight: '150px',
+                overflowY: 'auto',
+                padding: '10px',
+                background: 'rgba(0,0,0,0.2)',
+                borderRadius: '8px'
+              }}>
+                <div>
+                  <h4 style={{ fontSize: '11px', color: '#10b981', marginBottom: '5px' }}>🆕 Adicionados ({syncResult.addedFiles.length})</h4>
+                  <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '11px', opacity: 0.8 }}>
+                    {syncResult.addedFiles.map(f => <li key={f}>+ {f}</li>)}
+                  </ul>
+                </div>
+                <div>
+                  <h4 style={{ fontSize: '11px', color: '#3b82f6', marginBottom: '5px' }}>🔄 Atualizados ({syncResult.updatedFiles.length})</h4>
+                  <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '11px', opacity: 0.8 }}>
+                    {syncResult.updatedFiles.map(f => <li key={f}>~ {f}</li>)}
+                  </ul>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="tabs" style={{ marginBottom: '32px' }}>
           <button className={`tab ${activeTab === 'select' ? 'active' : ''}`} onClick={() => setActiveTab('select')}>
